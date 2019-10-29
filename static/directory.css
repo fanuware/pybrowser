@@ -1,0 +1,286 @@
+html, body { height:100% }
+
+body {
+    font-family: Arial;
+    margin: 0;
+    background: #e6e6e6;
+    overflow-x: hidden;
+}
+#menu {
+    background-color: lightskyblue;
+    padding-left: 6px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+.menu_selector {
+    display: none;
+}
+form {
+    display: inline-block;
+}
+#sep {
+    visibility: hidden;
+}
+#insertFolder {
+    background: none;
+    border: none;
+}
+.menu_item {
+    padding: 0 20px 0 22px;
+    font-size: 12px;
+    position: relative;
+    text-decoration: none;
+    line-height: 22px;
+    color: ghostwhite;
+}
+.menu_item::before {
+    background-image: url('icons/file.png');
+    content:"";
+    background-size: 18px 18px;
+    background-repeat: no-repeat;
+    position: absolute;
+    top: -2px;
+    left: 0px;
+    height: 22px;
+    width: 22px;
+}
+#menu_insert::before {
+    background-image: url('icons/folder.png');
+    z-index = 3;
+}
+#menu_logout::before {
+    background-image: url('icons/lock.png');
+    z-index = 3;
+}
+#menu_login::before {
+    background-image: url('icons/login.png');
+    z-index = 3;
+}
+#menu_previous::before {
+    background-image: url('icons/previous.png');
+    z-index = 3;
+}
+#menu_next::before {
+    background-image: url('icons/next.png');
+    z-index = 3;
+}
+#menu_users::before {
+    background-image: url('icons/users.png');
+    z-index = 3;
+}
+#menu_cancel::before {
+    background-image: url('icons/cancel.png');
+    z-index = 3;
+}
+#menu_save::before {
+    background-image: url('icons/save.png');
+    z-index = 3;
+}
+#menu_save_back::before {
+    background-image: url('icons/save_back.png');
+    z-index = 3;
+}
+.listitem {
+    display: block;
+    position: relative;
+    height: 32px;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    overflow: hidden;
+}
+.listitem > form:nth-child(1) {
+    flex: 1;
+    margin-right: 50px;
+}
+.link {
+    display: inline-block;
+    height: 32px;
+    line-height: 32px;
+    margin: 0;
+    padding: 0 0 0 32px;
+    position: relative;
+    font-size: 100%;
+    color: dimgray;
+    text-decoration: none;
+    white-space: nowrap;
+    width: 64px;
+}
+.listitem:nth-child(2n+1) {
+    background-color: white;
+}
+.listitem:nth-child(2n) {
+    background-color: whitesmoke;
+}
+.listitem:hover {
+    background-color: #f5faff;
+}
+.folder {
+    color: deepskyblue;
+}
+.foldertree {
+    color: darkgray;
+}
+.link::before {
+    background-image: url('icons/file.png');
+    content:"";
+    background-size: 26px 26px;
+    background-repeat: no-repeat;
+    position: absolute;
+    top: 3px;
+    left: 0px;
+    height: 32px;
+    width: 32px;
+}
+.edittool {
+    display: inline-flex;
+    height: 32px;
+    width: 32px;
+    margin-top: 3px;
+    background-size: 26px 26px;
+    background-repeat: no-repeat;
+    border: none;
+    background-color: transparent;
+    z-index: 1;
+}
+.listitem > form {
+    z-index: 1;
+}
+.remove {
+    background-image: url('icons/remove.png');
+}
+.edit {
+    background-image: url('icons/edit.png');
+}
+.rename {
+    background-image: url(icons/rename.png);
+}
+.copy {
+    background-image: url(icons/copy.png);
+}
+.download {
+    background-image: url(icons/download.png);
+}
+.bmp::before { background-image: url('icons/bmp.png'); }
+.cpp::before { background-image: url('icons/cpp.png'); }
+.css::before { background-image: url('icons/css.png'); }
+.dll::before { background-image: url('icons/dll.png'); }
+.doc::before { background-image: url('icons/doc.png'); }
+.exe::before { background-image: url('icons/exe.png'); }
+.folder::before { background-image: url('icons/folder.png'); }
+.foldertree::before { background-image: url('icons/foldertree.png'); }
+.gif::before { background-image: url('icons/gif.png'); }
+.html::before { background-image: url('icons/html.png'); }
+.ico::before { background-image: url('icons/ico.png'); }
+.js::before { background-image: url('icons/js.png'); }
+.pdf::before { background-image: url('icons/pdf.png'); }
+.php::before { background-image: url('icons/php.png'); }
+.png::before { background-image: url('icons/png.png'); }
+.jpg::before, .jpeg::before { background-image: url('icons/jpg.png'); }
+.py::before { background-image: url('icons/py.png'); }
+.zip::before { background-image: url('icons/zip.png'); }
+.h::before { background-image: url('icons/h.png'); }
+
+#pdfView {
+    width: 100%;
+    height: calc(100% - 50px);
+}
+
+/* modal dialog */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    padding-top: 100px; /* Location of the box */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* The Modal (background) */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    padding-top: 100px; /* Location of the box */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+.modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+}
+.close {
+    color: #aaaaaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+.close:hover, .close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+textarea {
+    display: block;
+    width: calc(100% - 30px);
+    height: 800px;
+    background-color: whitesmoke;
+    margin: 5px auto;
+    padding: 5px;
+    font-family: Consolas, "Comic Sans MS", cursive, sans-serif;
+    font-size: 0.8em;
+}
+#multimedia {
+        height: calc(100vh - 50px);
+}
+#multimedia > img {
+        display: block;
+        margin: 5px auto;
+        max-width:100%;
+        max-height:100%;
+}
+#login_wrapper {
+    background-color: #efefef;
+    padding: 10px;
+    font-family: arial;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+#passwordForm {
+    display: block;
+    max-width: 240px;
+    margin: 0 auto;
+}
+#passwordForm > label, #passwordForm > input, #passwordForm > button {
+    width: 100%;
+    display: block;
+    margin: 5px 0 5px 0;
+    border: none;
+    height: 20px;
+}
+#passwordForm > button {
+    height: 30px;
+}
+#passwordForm > button {
+    background-color: #dedede;
+}
+#passwordForm > button:hover {
+    background-color: #c6c6c6;
+}
+h3{
+    text-align: center;
+}
