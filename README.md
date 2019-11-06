@@ -1,5 +1,4 @@
 # pybrowser
-
 Simple file browser to view, download, upload, delete, rename and edit files on your system.
 
 - Native Python3, no dependencies
@@ -24,3 +23,9 @@ http://localhost:8440/cgi-bin/pybrowser.py
 Username: admin
 
 Password: admin
+
+
+## License
+[![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)][license]
+
+[license]: https://github.com/fanuware/pybrowser/blob/master/LICENSE
