@@ -5,8 +5,9 @@ import hashlib
 import os
 import re
 import templates
+import uuid
 
-class UserLogger:
+class _UserLogger:
 
     # user permissions
     PERMISSION_NONE = 0
@@ -14,10 +15,9 @@ class UserLogger:
     PERMISSION_WRITE = 2
     PERMISSION_ADMIN = 3
     ALLOW_PUBLIC = "[all]"
-    ALLOW_BLANK_NAME = "[blank]"
 
     # maximum session duration, starts after login [s]
-    _MAX_SESSION_DURATION = 60 * 60 * 24
+    _MAX_SESSION_DURATION = 60 * 60 * 24 * 365
     
     # maximum login fails
     _MAX_LOGIN_FAILS = 10
@@ -32,27 +32,36 @@ class UserLogger:
         '''initialize database and and set up current user tables'''
 
         # identify user
-        try:
-            self.remoteAddr = os.environ['REMOTE_ADDR']
-            self.remotePort = os.environ['REMOTE_PORT']
-            self.httpUserAgent = os.environ['HTTP_USER_AGENT']
-        except:
-            self.remoteAddr = "addr"
-            self.remotePort = "port"
-            self.httpUserAgent = "http"
-        self.remotePort = "port"
-        self.connectionId = self.remoteAddr+'&'+self.remotePort+'&'+self.httpUserAgent
+        self.connectionId = hashlib.sha512(os.urandom(16)).hexdigest()
+        self.sessionKey = ''
+        if 'HTTP_COOKIE' in os.environ:
+            cookies = dict()
+            cookiesList = os.environ['HTTP_COOKIE'].split('; ')
+            for cookie in cookiesList:
+                if '=' in cookie:
+                    cookie = cookie.split('=')
+                    cookies[cookie[0]] = cookie[1]
+            self.connectionId = cookies.get('connection_identifier', self.connectionId)
+            self.sessionKey = cookies.get('session_key', self.sessionKey)
 
         # create table and user
         cur = self.__openDb()
         cur.execute('CREATE TABLE IF NOT EXISTS Users (id INTEGER PRIMARY KEY, name VARCHAR(50) NOT NULL UNIQUE, password CHAR(128), permissions TEXT)')
-        cur.execute('CREATE TABLE IF NOT EXISTS State (id INTEGER, connectionId VARCHAR(255) PRIMARY KEY, hashSeed CHAR(128), targetUrl TEXT, copyUrl TEXT, login_time TIMESTAMP, last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(id) REFERENCES users(id))')
+        cur.execute('CREATE TABLE IF NOT EXISTS State (id INTEGER, connectionId VARCHAR(255) PRIMARY KEY, loginHashSeed CHAR(128), sessionId CHAR(128), targetUrl TEXT, copyUrl TEXT, login_time TIMESTAMP, last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(id) REFERENCES users(id))')
         cur.execute('CREATE TABLE IF NOT EXISTS Fails (connectionId VARCHAR(255) PRIMARY KEY, counter INTEGER DEFAULT 0)')
 
         # create tables for user
         if (not cur.execute('SELECT * FROM State WHERE connectionId=?', (self.connectionId,)).fetchone()):
             cur.execute('INSERT INTO State (connectionId) VALUES (?)', (self.connectionId,))
         self.__closeDb()
+
+    def changeConnectionId(self, connectionId=str(uuid.uuid4())):
+        cur = self.__openDb()
+        cur.execute('DELETE FROM State WHERE connectionId=?', (self.connectionId,))
+        self.connectionId = connectionId
+        cur.execute('INSERT INTO State (connectionId) VALUES (?)', (self.connectionId,))
+        self.__closeDb()
+        return self.connectionId
 
     def userAdd(self, name, password, path, accessPermission):
         '''add new user'''
@@ -75,7 +84,7 @@ class UserLogger:
             cur.execute('DELETE FROM Users WHERE name=?', (name,))
             self.__closeDb();
 
-    def login(self, name, password):
+    def login(self, name):
         '''user login'''
         self.resetCopyUrl()
         cur = self.__openDb()
@@ -91,24 +100,26 @@ class UserLogger:
             counter = fetchone[0]
 
         # retrieve seed
-        cur.execute('SELECT hashSeed FROM State WHERE connectionId=?', (self.connectionId,))
+        cur.execute('SELECT loginHashSeed FROM State WHERE connectionId=?', (self.connectionId,))
         fetchone = cur.fetchone()
-        seed = "" if not fetchone or not fetchone[0] else fetchone[0]
+        loginSeed = "" if not fetchone or not fetchone[0] else fetchone[0]
+        
+        cur.execute('SELECT sessionId FROM State WHERE connectionId=?', (self.connectionId,))
+        fetchone = cur.fetchone()
+        sessionSeed = "" if not fetchone or not fetchone[0] else fetchone[0]
 
         # verify name and password
         uid = None
         cur.execute('SELECT id, password FROM Users WHERE name=?', (name,))
         fetchone = cur.fetchone()
-        if fetchone and hashlib.sha512(fetchone[1].encode() + seed.encode()).hexdigest() == password:
+        if fetchone and hashlib.sha512(
+            hashlib.sha512(fetchone[1].encode() +
+                           loginSeed.encode()).hexdigest().encode() +
+            sessionSeed.encode()).hexdigest() == self.sessionKey:
             # set user to be authorized
             uid = fetchone[0]
 
-        # verify only password field
-        cur.execute("SELECT id, password FROM Users WHERE name LIKE '%" + self.ALLOW_BLANK_NAME + "%'")
-        for ids, passwordServer in cur.fetchall():
-            if hashlib.sha512(passwordServer.encode() + seed.encode()).hexdigest() == password:
-                uid = ids
-        if (( uid and counter < self._MAX_LOGIN_FAILS )):
+        if uid and counter < self._MAX_LOGIN_FAILS:
 
             # set user to be authorized
             cur.execute('UPDATE State SET id=?, login_time=CURRENT_TIMESTAMP WHERE connectionId=?', (uid, self.connectionId,))
@@ -118,7 +129,7 @@ class UserLogger:
             # create administrator as first user
             if not cur.execute('SELECT * FROM Users').fetchone():
                 cur.execute('INSERT INTO Users (name, password, permissions) VALUES (?,?,?)',
-                            ("Admin" + self.ALLOW_BLANK_NAME, hashlib.sha512(self._PWS_INIT_MASTER.encode()).hexdigest(),
+                            ('admin', hashlib.sha512(self._PWS_INIT_MASTER.encode()).hexdigest(),
                              os.sep + '$' + str(self.PERMISSION_ADMIN)))
             
             # login rejected
@@ -139,7 +150,7 @@ class UserLogger:
         cur.execute('SELECT name FROM Users WHERE id = (SELECT id FROM State WHERE connectionId=? and CURRENT_TIMESTAMP BETWEEN login_time AND DATETIME(login_time, ? ))',
                     (self.connectionId, ('+'+str(self._MAX_SESSION_DURATION)+' seconds')))
         fetch = cur.fetchone()
-        ret = None if fetch is None else fetch[0].replace(self.ALLOW_BLANK_NAME, "")
+        ret = None if fetch is None else fetch[0]
         self.__closeDb()
         return ret
 
@@ -160,11 +171,29 @@ class UserLogger:
                     (self.connectionId, ('+'+str(self._MAX_SESSION_DURATION)+' seconds')))
         if cur.fetchone():
 
-            # check user permission
-            cur.execute('SELECT permissions FROM Users WHERE id=(SELECT id FROM State WHERE connectionId=?)', (self.connectionId,))
-            fetch = cur.fetchone()
-            if fetch:
-                permissionUser = fetch[0]
+            # retrieve seed
+            cur.execute('SELECT loginHashSeed FROM State WHERE connectionId=?', (self.connectionId,))
+            fetchone = cur.fetchone()
+            loginSeed = "" if not fetchone or not fetchone[0] else fetchone[0]
+
+            cur.execute('SELECT sessionId FROM State WHERE connectionId=?', (self.connectionId,))
+            fetchone = cur.fetchone()
+            sessionSeed = "" if not fetchone or not fetchone[0] else fetchone[0]
+            
+            # verify name and password
+            cur.execute('SELECT id, password FROM Users WHERE id=(SELECT id FROM State WHERE connectionId=?)', (self.connectionId,))
+            fetchone = cur.fetchone()
+            if fetchone and hashlib.sha512(hashlib.sha512(fetchone[1].encode() + 
+                                                          loginSeed.encode()).hexdigest().encode() +
+                                           sessionSeed.encode()).hexdigest() == self.sessionKey:
+                
+                # check user permission
+                cur.execute('SELECT permissions FROM Users WHERE id=(SELECT id FROM State WHERE connectionId=?)', (self.connectionId,))
+
+                fetch = cur.fetchone()
+                if fetch:
+                    permissionUser = fetch[0]
+        
         for p in (permissionPublic + permissionUser).strip(":").split(":"):
             permit = p.split("$")
             if (permit[0] == os.sep) or (targetUrl + os.sep).startswith(permit[0] + os.sep):
@@ -177,9 +206,29 @@ class UserLogger:
         '''show login page'''
         randomHash = hashlib.sha512(os.urandom(16)).hexdigest()
         cur = self.__openDb()
-        cur.execute('UPDATE State SET hashSeed=? WHERE connectionId=?', (randomHash, self.connectionId,))
+        cur.execute('UPDATE State SET loginHashSeed=? WHERE connectionId=?', (randomHash, self.connectionId,))
+        cur.execute('UPDATE State SET sessionId=? WHERE connectionId=?', (randomHash, self.connectionId,))
         self.__closeDb()
-        templates.login(message, randomHash)
+        templates.login(msg=message, random=randomHash)
+    
+    def nextSession(self):
+        '''generate next session seed'''
+        randomHash = hashlib.sha512(os.urandom(16)).hexdigest()
+        cur = self.__openDb()
+        cur.execute('UPDATE State SET sessionId=? WHERE connectionId=?', (randomHash, self.connectionId,))
+        self.__closeDb()
+        return randomHash
+    
+    def generateSession(self):
+        '''generate next session seed'''
+        randomHash = hashlib.sha512(os.urandom(16)).hexdigest()
+        return randomHash
+    
+    def saveSession(self, sessionId):
+        '''generate next session seed'''
+        cur = self.__openDb()
+        cur.execute('UPDATE State SET sessionId=? WHERE connectionId=?', (sessionId, self.connectionId,))
+        self.__closeDb()
 
     def setCopyUrl(self, copyUrl):
         '''set copy url, used when user want to copy a file'''
@@ -251,5 +300,15 @@ class UserLogger:
             self.conn.close()
             self.cur = None
 
-
-
+class UserLogger:
+    # user permissions
+    PERMISSION_NONE = 0
+    PERMISSION_READ = 1
+    PERMISSION_WRITE = 2
+    
+    instance = None
+    def __init__(self):
+        if not UserLogger.instance:
+            UserLogger.instance = _UserLogger()
+    def __getattr__(self, name):
+        return getattr(self.instance, name)

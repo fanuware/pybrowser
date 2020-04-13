@@ -29,7 +29,7 @@ def showEditor(path, userLogger):
         previousImage = None if currentIndex <= 0 else listImages[currentIndex - 1]
         nextImage = None if currentIndex+1 >= len(listImages) else listImages[currentIndex + 1]
         templates.imageViewer(filepath, filename, previousImage, nextImage)
-    elif 'application/zip' in str(mime):
+    elif 'application/zip' in str(mime) or 'application/x-zip-compressed' in str(mime):
         templates.unzipper(filepath, filename)
     elif 'application/pdf' in str(mime):
         templates.pdfViewer(filepath, filename)
@@ -54,7 +54,7 @@ def showEditor(path, userLogger):
     for character in specialCharacters:
         if character != '&amp;':
             textcontent = textcontent.replace(character,'&amp;'+character[1:])
-    templates.editor(filepath, filename, textcontent, userLogger)
+    templates.editor(filepath, filename, textcontent)
 
 
 ##################################################

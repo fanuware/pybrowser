@@ -1,3 +1,4 @@
 /cgi-bin/*.pyc
 /userlogger.sqlite
 /cgi-bin/__pycache__/*.pyc
+/cgi-bin/userlogger.sqlite

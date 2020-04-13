@@ -68,7 +68,7 @@ if (userPermission < UserLogger.PERMISSION_READ):
     userLogger.showLogin('Identification required')
 elif userPermission == UserLogger.PERMISSION_READ:
     if (cmd == "nocommand"):
-        templates.directory(filepath, userLogger, currentPage)
+        templates.directory(filepath, currentPage)
     else:
         userLogger.showLogin('Identification required')
 
@@ -204,26 +204,6 @@ if not os.path.isdir(filepath):
 
 # show directory
 if (userLogger.getPermission(filepath) >= userLogger.PERMISSION_READ):
-    templates.directory(filepath, userLogger, currentPage)
+    templates.directory(filepath, currentPage)
 else:
     userLogger.showLogin('Identification required')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,60 +1,97 @@
 #!/usr/bin/env python3
 
-import cgi, os
+import os
+import cgi
+import io
 from stat import S_IEXEC
 import cgitb; cgitb.enable()
 
+from contextlib import redirect_stdout
+
 import userlogger
 
-def message(title, message):
-    print("Content-type:text/html\n")
-    print('<!DOCTYPE html><html lang="en">')
-    print('<head>')
-    print('<title>Message</title>')
-    print('<link rel="shortcut icon" href="../static/directory.ico">')
-    print('<meta name="viewport" content="width=device-width, initial-scale=1.0">')
-    print('</head>')
-    print('<body>')
-    print('<h1>'+title+'</h1>')
-    print('<h2 style="color=red;">'+message+'</h2>')
-    print('</body>')
-    print('</html>')
-    exit()
+
+def html_page(**kwargs):
+    def decorator(func):
+        def wrapper(*arg,**kw):
+            print("Content-type:text/html\n")
+            print('<!DOCTYPE html><html lang="en">')
+            print('<head>')
+            print('<title>' + kwargs['title'] + '</title>')
+            print('<link rel="shortcut icon" href="../static/directory.ico">')
+            print('<meta name="viewport" content="width=device-width, initial-scale=1.0">')
+            print('<link rel="stylesheet" href="../static/directory.css">')
+            for js in kwargs.get('js', []):
+                print('<script src="' + js + '"></script>')
+            print('</head>')
+            
+            try:
+                with io.StringIO() as buf, redirect_stdout(buf):
+                    nextSession = None
+                    userLogger = userlogger.UserLogger()
+                    if 'token' in kwargs:
+                        nextSession = userLogger.generateSession()
+                        print('<body onload="updateSession(\'' + nextSession + '\')">')
+                    else:
+                        print('<body>')
+                    func(*arg, **kw)
+                    if nextSession:
+                        userLogger.saveSession(nextSession)
+                    output = buf.getvalue()
+                print(output)
+            except Exception as e:
+                print('<h1>Error</h1>')
+                print('<h2 style="color=red;">' + str(e) + '</h2>')
+            print('</body>')
+            print('</html>')
+            
+            exit()
+        return wrapper
+    return decorator
 
 
-def error(msg):
-    message('Error', msg)
-    
+def html_token(**kwargs):
+    kwargs['token'] = True
+    kwargs['js'] = set(kwargs.get('js', []))
+    kwargs['js'].add('../static/sha512.js')
+    def decorator(func):
+        @html_page(**kwargs)
+        def wrapper(*arg, **kw):
+            func(*arg, **kw)
+        return wrapper
+    return decorator
 
-def redirect(targetUrl):
+
+@html_page(title='Message')
+def message(*args, **kwargs):
+    title = args[0]
+    message = args[1]
+    print('<h1>' + title + '</h1>')
+    print('<h2 style="color=red;">' + message + '</h2>')
+
+
+@html_page(title='Message')
+def error(*args, **kwargs):
+    message = args[0]
+    print('<h1>Error</h1>')
+    print('<h2 style="color=red;">' + message + '</h2>')
+
+
+@html_page(title='Redirect')
+def redirect(*args, **kwargs):
+    targetUrl = args[0]
     if (targetUrl == None):
         targetUrl="pybrowser.py"    
-    # html output
-    print('Content-type:text/html\n')
-    print('<!DOCTYPE html><html lang="en">')
-    print('<head>')
-    print('<link rel="shortcut icon" href="../static/directory.ico">')
     print('<meta http-equiv="refresh" content="0;url='+targetUrl+'" />')
-    print('<title>You are going to be redirected</title>')
-    print('</head> ')
-    print('<body>')
-    print('<h3>Authorization in process</h3>')
-    print('</body>')
-    print('</html>')
-    exit()
     
 
-def login(message, randomHash):
+@html_token(title='Login')
+def login(*args, **kwargs):
     '''show login page'''
-    print("Content-type:text/html\n")
-    print('<!DOCTYPE html><html lang="en">')
-    print('<head>')
-    print('<title>Login</title>')
-    print('<link rel="shortcut icon" href="../static/directory.ico">')
-    print('<meta name="viewport" content="width=device-width, initial-scale=1.0">')
-    print('<link rel="stylesheet" href="../static/directory.css">')
-    print('</head>')
-    print('<body>')
+    message = kwargs['msg']
+    randomHash = kwargs['random']
+    userLogger = userlogger.UserLogger()
+
     print('<h3>'+message+'</h3>')
     print('<div id="login_wrapper"><form id="passwordForm" enctype="multipart/form-data" action="authorization.py" method="post" autocomplete="off">')
     print('<input type="hidden" id="password" name="password" value="' + randomHash + '" />')
@@ -63,25 +100,18 @@ def login(message, randomHash):
     print('<label for="password_field">Password:</label>')
     print('''<input id="password_field" type="password" style="background: " value ="" name="identification">''')
     print('<button onclick="sendLogin()">Login</button></form></div>')
-    print('<script src="../static/sha512.js"></script>')
-    #print('<script>function autoreset() { document.getElementById("password_field").value = ""; } autoreset();</script>')
-    print('</body>')
-    print('</html>')
-    exit()
+    print('<script>setCookie("connection_identifier", "' + userLogger.connectionId + '");</script>')
 
 
-def editor(filepath, filename, textcontent, userLogger):
+@html_token(title='Editor', js=['../static/directory.js'])
+def editor(*args, **kwargs):
+    filepath = args[0]
+    filename = args[1]
+    textcontent = args[2]
+    
+    userLogger = userlogger.UserLogger()
     permission = userLogger.getPermission(filepath)
 
-    print("Content-type:text/html;charset=utf-8\n")
-    print('<!DOCTYPE html><html lang="en">')
-    print('<head>')
-    print('<title>Directory</title>')
-    print('<link rel="shortcut icon" href="../static/directory.ico">')
-    print('<link rel="stylesheet" href="../static/directory.css">')
-    print('<meta name="viewport" content="width=device-width, initial-scale=1.0">')
-    print('</head>')
-    print('<body>')
     print('''<span id="pathname">''' + os.path.join(filepath, filename) + '''</span>
     <div id="menu">
     <form action="pybrowser.py" method = "post">
@@ -123,22 +153,12 @@ def editor(filepath, filename, textcontent, userLogger):
                 }
             }, false);
     </script>''')
-    print('<script src="../static/directory.js"></script>')
-    print('</body>')
-    print('</html>')
-    exit()
 
 
-def pdfViewer(filepath, filename):
-    print("Content-type:text/html;charset=utf-8\n")
-    print('<!DOCTYPE html><html lang="en">')
-    print('<head>')
-    print('<title>Directory</title>')
-    print('<link rel="shortcut icon" href="../static/directory.ico">')
-    print('<link rel="stylesheet" href="../static/directory.css">')
-    print('<meta name="viewport" content="width=device-width, initial-scale=1.0">')
-    print('</head>')
-    print('<body>')
+@html_page(title='PDF Viewer', js=['../static/directory.js'])
+def pdfViewer(*args, **kwargs):
+    filepath = args[0]
+    filename = args[1]
     print('''<span id="pathname">''' + os.path.join(filepath, filename) + '''</span>
     <div id="menu">
     <form action="pybrowser.py" method = "post">
@@ -150,23 +170,16 @@ def pdfViewer(filepath, filename):
     print('''<object id="pdfView" data="download.py?path=''' + os.path.join(filepath, filename) + '''" type="application/pdf" width="100%" height="100%">
         <p><a href="download.py?path=''' + os.path.join(filepath, filename) + '''">Download</a></p>
         </object>''')
-    print('<script src="../static/directory.js"></script>')
-    print('</body>')
-    print('</html>')
-    exit()
     
 
-def imageViewer(filepath, filename, previousImage=None, nextImage=None):
+@html_page(title='Image Viewer', js=['../static/directory.js'])
+def imageViewer(*args, **kwargs):
     '''show editor page'''
-    print("Content-type:text/html\n")
-    print('<!DOCTYPE html><html lang="en">')
-    print('<head>')
-    print('<title>Directory</title>')
-    print('<link rel="shortcut icon" href="../static/directory.ico">')
-    print('<link rel="stylesheet" href="../static/directory.css">')
-    print('<meta name="viewport" content="width=device-width, initial-scale=1.0">')
-    print('</head>')
-    print('<body>')
+    filepath = args[0]
+    filename = args[1]
+    previousImage = args[2]
+    nextImage = args[3]
+    
     print('''<span id="pathname">''' + os.path.join(filepath, filename) + '''</span>
     <div id="menu">
     <form action="pybrowser.py" method = "post">
@@ -184,23 +197,13 @@ def imageViewer(filepath, filename, previousImage=None, nextImage=None):
         <input type="submit" style="display: none;">Next</label></form>''')
     print('</div>')
     print('<div id="multimedia"><img src="download.py?path=' + os.path.join(filepath, filename) + '" alt="image preview"></div>')
-    print('<script src="../static/directory.js"></script>')
-    print('</body>')
-    print('</html>')
-    exit()
 
 
-def unzipper(filepath, filename):
+@html_token(title='Unzip', js=['../static/directory.js'])
+def unzipper(*args, **kwargs):
+    filepath = args[0]
+    filename = args[1]
     '''show option to unzip'''
-    print("Content-type:text/html\n")
-    print('<!DOCTYPE html><html lang="en">')
-    print('<head>')
-    print('<title>Directory</title>')
-    print('<link rel="shortcut icon" href="../static/directory.ico">')
-    print('<link rel="stylesheet" href="../static/directory.css">')
-    print('<meta name="viewport" content="width=device-width, initial-scale=1.0">')
-    print('</head>')
-    print('<body>')
     print('''<span id="pathname">''' + os.path.join(filepath, filename) + '''</span>
     <div id="menu">
     <form action="pybrowser.py" method = "post">
@@ -216,22 +219,14 @@ def unzipper(filepath, filename):
                 <input type="submit" value='Unzip'></span>
             </label>
         </form>''')
-    print('<script src="../static/directory.js"></script>')
-    print('</body>')
-    print('</html>')
-    exit()
 
 
-def usermanager(userList, targetUrl, message=""):
-    print("Content-type:text/html\n")
-    print('<!DOCTYPE html><html lang="en">')
-    print('<head>')
-    print('<title>Directory</title>')
-    print('<link rel="shortcut icon" href="../static/directory.ico">')
-    print('<link rel="stylesheet" href="../static/directory.css">')
-    print('<meta name="viewport" content="width=device-width, initial-scale=1.0">')
-    print('</head>')
-    print('<body>')
+@html_token(title='User Manager', js=['../static/sha512.js'])
+def usermanager(*args, **kwargs):
+    userList = args[0]
+    targetUrl = args[1]
+    message = kwargs.get('msg', '')
+    
     print('''<span id="pathname">''' + targetUrl[targetUrl.find(os.sep):] + '''</span>
     <div id="menu">
     <form action="pybrowser.py" method = "post">
@@ -265,11 +260,15 @@ def usermanager(userList, targetUrl, message=""):
     print('<table style="width:100%"><tr><th>Name</th><th>Permission</th></tr>')
     for user in userList:
         print('<tr><td>'+user[0]+'</td><td>'+user[1]+'</td></tr>')
-    print('</table><script src="../static/sha512.js"></script></body></html>')
-    exit()
+    print('</table>')
 
 
-def directory(filepath, userLogger, currentPage=0):
+@html_token(title='Directory', js=['../static/directory.js'])
+def directory(*args, **kwargs):
+    filepath = args[0]
+    currentPage = args[1]
+    userLogger = userlogger.UserLogger()
+
     permission = userLogger.getPermission(filepath)
     MAX_LIST_LEN = 500
     
@@ -292,16 +291,6 @@ def directory(filepath, userLogger, currentPage=0):
     pageHasPrevious = startIndex > 0
     pageHasNext = len(listAll) > (currentPage + 1) * MAX_LIST_LEN
 
-    # html output
-    print("Content-type:text/html\n")
-    print('<!DOCTYPE html><html lang="en">')
-    print('<head>')
-    print('<title>Directory</title>')
-    print('<link rel="shortcut icon" href="../static/directory.ico">')
-    print('<link rel="stylesheet" href="../static/directory.css">')
-    print('<meta name="viewport" content="width=device-width, initial-scale=1.0">')
-    print('</head>')
-    print('<body>')
     print('<span id="pathname">' + filepath + '</span><span id="sep">' + os.sep + '</span>')
 
     # menu-bar
@@ -454,17 +443,3 @@ def directory(filepath, userLogger, currentPage=0):
             </form>
         </div>
     </div>''')
-    print('<script src="../static/directory.js"></script>')
-    print('</body>')
-    print('</html>')
-    exit()
-
-
-
-
-
-
-
-
-
-

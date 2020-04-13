@@ -99,4 +99,3 @@ elif os.path.isdir(file):
     os.remove(tmpZipName)
 else:
     templates.error(file)
-

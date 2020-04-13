@@ -1,10 +1,32 @@
+function setCookie(cname, cvalue) {
+    var date = new Date();
+    date.setTime(date.getTime() + (365*24*60*60*1000));
+    var expires = "expires="+ date.toUTCString();
+    document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+}
+
 function sendLogin() {
     var passwordString = document.getElementById('password_field').value;
-    var seed= document.getElementById('password').value;
-    document.getElementById('password').value = SHA512(SHA512(SHA512(passwordString)) + seed);
+    var loginSeed = document.getElementById('password').value;
+    var loginKey = SHA512(SHA512(SHA512(passwordString)) + loginSeed);
+    localStorage.setItem('login_key', loginKey);
+
+    var sessionId = localStorage.getItem('session_id');
+    var sessionKey = SHA512(loginKey + sessionId);
+    setCookie("session_key", sessionKey)
+    
+    document.getElementById('password').value = ""
     document.getElementById('password_field').value = "";
     document.getElementById("passwordForm").submit();
 }
+
+function updateSession(sessionId) {
+    localStorage.setItem('session_id', sessionId);
+    var loginKey = localStorage.getItem('login_key');
+    var sessionKey = SHA512(loginKey + sessionId);
+    setCookie("session_key", sessionKey)
+}
+
 function sendCreateUser() {
     var passwordString = document.getElementById('password_field').value;
     document.getElementById('password').value = SHA512(passwordString);

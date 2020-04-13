@@ -45,7 +45,9 @@ if cmd == "useradd":
         )
     except:
         templates.error('Invalid arguments to add user')
-    templates.usermanager(userLogger.getUserList(), userLogger.getTargetUrl(), cmd + ' successful')
+    templates.usermanager(userLogger.getUserList(),
+                          userLogger.getTargetUrl(),
+                          msg=cmd + ' successful')
     
 # delete user
 elif cmd == "userdel":
@@ -57,18 +59,9 @@ elif cmd == "userdel":
         )
     except:
         templates.error('Invalid argument to delete user')
-    templates.usermanager(userLogger.getUserList(), userLogger.getTargetUrl(), cmd + ' successful')
+    templates.usermanager(userLogger.getUserList(),
+                          userLogger.getTargetUrl(),
+                          msg=cmd + ' successful')
 
 else:
     templates.usermanager(userLogger.getUserList(), userLogger.getTargetUrl())
-
-
-
-
-
-
-
-
-
-
-

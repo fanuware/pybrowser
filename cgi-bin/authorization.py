@@ -22,8 +22,8 @@ def cgiFieldStorageToDict(values):
 if ("cmd" in form) and (form.getvalue("cmd") == "logout"):
     userLogger.logout()
     userLogger.showLogin('User is logged out')
-if "user" in form and "password" in form:
-    userLogger.login(form.getvalue("user"), form.getvalue("password"))
+if "user" in form:
+    userLogger.login(form.getvalue("user"))
     templates.redirect(userLogger.getTargetUrl())
 
 # validate login authorization
