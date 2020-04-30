@@ -14,7 +14,7 @@ import userlogger
 def html_page(**kwargs):
     def decorator(func):
         def wrapper(*arg,**kw):
-            print("Content-type:text/html\n")
+            print("Content-type:text/html;charset=utf-8\n")
             print('<!DOCTYPE html><html lang="en">')
             print('<head>')
             print('<title>' + kwargs['title'] + '</title>')
@@ -24,27 +24,39 @@ def html_page(**kwargs):
             for js in kwargs.get('js', []):
                 print('<script src="' + js + '"></script>')
             print('</head>')
-            
-            try:
-                with io.StringIO() as buf, redirect_stdout(buf):
-                    nextSession = None
-                    userLogger = userlogger.UserLogger()
-                    if 'token' in kwargs:
-                        nextSession = userLogger.generateSession()
-                        print('<body onload="updateSession(\'' + nextSession + '\')">')
-                    else:
-                        print('<body>')
-                    func(*arg, **kw)
+
+            if True:
+                try:
+                    with io.StringIO() as buf, redirect_stdout(buf):
+                        nextSession = None
+                        userLogger = userlogger.UserLogger()
+                        if 'token' in kwargs:
+                            nextSession = userLogger.generateSession()
+                            print('<body onload="updateSession(\'' + nextSession + '\')">')
+                        else:
+                            print('<body>')
+                        func(*arg, **kw)
+                        output = buf.getvalue()
+                    print(output)
                     if nextSession:
                         userLogger.saveSession(nextSession)
-                    output = buf.getvalue()
-                print(output)
-            except Exception as e:
-                print('<h1>Error</h1>')
-                print('<h2 style="color=red;">' + str(e) + '</h2>')
-            print('</body>')
-            print('</html>')
-            
+                except Exception as e:
+                    print('<h1>Error</h1>')
+                    print('<h2 style="color=red;">' + str(e) + '</h2>')
+                print('</body>')
+                print('</html>')
+            else:
+                nextSession = None
+                userLogger = userlogger.UserLogger()
+                if 'token' in kwargs:
+                    nextSession = userLogger.generateSession()
+                    print('<body onload="updateSession(\'' + nextSession + '\')">')
+                else:
+                    print('<body>')
+                func(*arg, **kw)
+                if nextSession:
+                    userLogger.saveSession(nextSession)
+
             exit()
         return wrapper
     return decorator
@@ -77,7 +89,7 @@ def error(*args, **kwargs):
     print('<h2 style="color=red;">' + message + '</h2>')
 
 
-@html_page(title='Redirect')
+@html_token(title='Redirect')
 def redirect(*args, **kwargs):
     targetUrl = args[0]
     if (targetUrl == None):
@@ -103,7 +115,7 @@ def login(*args, **kwargs):
     print('<script>setCookie("connection_identifier", "' + userLogger.connectionId + '");</script>')
 
 
-@html_token(title='Editor', js=['../static/directory.js'])
+@html_token(title='Editor')
 def editor(*args, **kwargs):
     filepath = args[0]
     filename = args[1]
@@ -135,8 +147,8 @@ def editor(*args, **kwargs):
         print('<label class="menu_item" id="menu_login"><input type="hidden" name="cmd" value="logout"><input type="submit" style="display: none;">Login</label></form>')
     print('</div>')
     import specialCharacter
-    specialCharacter.printTextarea(textcontent)
-    print('''    <script>
+    print('<textarea id="textcontent" name="textcontent" form="usrform">'+textcontent+'</textarea>')
+    print('''<script>
         // window keyboard listener
         var keys = {};
         window.addEventListener("keydown",
@@ -153,9 +165,10 @@ def editor(*args, **kwargs):
                 }
             }, false);
     </script>''')
+    print('<script src="../static/directory.js"></script>')
 
 
-@html_page(title='PDF Viewer', js=['../static/directory.js'])
+@html_page(title='PDF Viewer')
 def pdfViewer(*args, **kwargs):
     filepath = args[0]
     filename = args[1]
@@ -170,9 +183,10 @@ def pdfViewer(*args, **kwargs):
     print('''<object id="pdfView" data="download.py?path=''' + os.path.join(filepath, filename) + '''" type="application/pdf" width="100%" height="100%">
         <p><a href="download.py?path=''' + os.path.join(filepath, filename) + '''">Download</a></p>
         </object>''')
+    print('<script src="../static/directory.js"></script>')
     
 
-@html_page(title='Image Viewer', js=['../static/directory.js'])
+@html_page(title='Image Viewer')
 def imageViewer(*args, **kwargs):
     '''show editor page'''
     filepath = args[0]
@@ -197,9 +211,10 @@ def imageViewer(*args, **kwargs):
         <input type="submit" style="display: none;">Next</label></form>''')
     print('</div>')
     print('<div id="multimedia"><img src="download.py?path=' + os.path.join(filepath, filename) + '" alt="image preview"></div>')
+    print('<script src="../static/directory.js"></script>')
 
 
-@html_token(title='Unzip', js=['../static/directory.js'])
+@html_token(title='Unzip')
 def unzipper(*args, **kwargs):
     filepath = args[0]
     filename = args[1]
@@ -263,7 +278,7 @@ def usermanager(*args, **kwargs):
     print('</table>')
 
 
-@html_token(title='Directory', js=['../static/directory.js'])
+@html_token(title='Directory')
 def directory(*args, **kwargs):
     filepath = args[0]
     currentPage = args[1]
@@ -443,3 +458,4 @@ def directory(*args, **kwargs):
             </form>
         </div>
     </div>''')
+    print('<script src="../static/directory.js"></script>')
