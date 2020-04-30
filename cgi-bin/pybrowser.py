@@ -65,12 +65,28 @@ userLogger.setTargetUrl('pybrowser.py?path='+filepath)
 
 # make sure user is allowed to read
 if (userPermission < UserLogger.PERMISSION_READ):
-    userLogger.showLogin('Identification required')
+    if "redirect" not in form:
+        args = '&'.join([key + '=' + str(form[key].value) for key in form.keys()])
+        if args:
+            url = os.environ['SCRIPT_NAME'] + '?redirect=True&' + args
+        else:
+            url = os.environ['SCRIPT_NAME'] + '?redirect=True'
+        templates.redirect(url)
+    else:
+        userLogger.showLogin('Identification required')
 elif userPermission == UserLogger.PERMISSION_READ:
     if (cmd == "nocommand"):
         templates.directory(filepath, currentPage)
     else:
-        userLogger.showLogin('Identification required')
+        if "redirect" not in form:
+            args = '&'.join([key + '=' + str(form[key].value) for key in form.keys()])
+            if args:
+                url = os.environ['SCRIPT_NAME'] + '?redirect=True&' + args
+            else:
+                url = os.environ['SCRIPT_NAME'] + '?redirect=True'
+            templates.redirect(url)
+        else:
+            userLogger.showLogin('Identification required')
 
 
 ##################################################
@@ -206,4 +222,12 @@ if not os.path.isdir(filepath):
 if (userLogger.getPermission(filepath) >= userLogger.PERMISSION_READ):
     templates.directory(filepath, currentPage)
 else:
-    userLogger.showLogin('Identification required')
+    if "redirect" not in form:
+        args = '&'.join([key + '=' + str(form[key].value) for key in form.keys()])
+        if args:
+            url = os.environ['SCRIPT_NAME'] + '?redirect=True&' + args
+        else:
+            url = os.environ['SCRIPT_NAME'] + '?redirect=True'
+        templates.redirect(url)
+    else:
+        userLogger.showLogin('Identification required')

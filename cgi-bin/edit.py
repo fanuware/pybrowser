@@ -79,14 +79,21 @@ userPermission = userLogger.getPermission(path)
 
 # make sure user is allowed to read
 if (userPermission < UserLogger.PERMISSION_READ):
-    userLogger.setTargetUrl('pybrowser.py?path='+path)
-    userLogger.showLogin('Identification required')
+    url = 'pybrowser.py?path='+path
+    if "redirect" not in form:
+        templates.redirect(url)
+    else:
+        userLogger.setTargetUrl(url)
+        userLogger.showLogin('Identification required')
 elif userPermission == UserLogger.PERMISSION_READ:
     if cmd == "nocommand":
         showEditor(path, userLogger)
     else:
-        userLogger.setTargetUrl('pybrowser.py?path='+path)
-        userLogger.showLogin('Identification required')
+        url = 'pybrowser.py?path='+path
+        if "redirect" not in form:
+            templates.redirect(url)
+        else:
+            userLogger.setTargetUrl(url)
 
 
 ##################################################

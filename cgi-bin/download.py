@@ -60,7 +60,15 @@ userPermission = userLogger.getPermission(os.path.dirname(file))
 
 # make sure user is allowed to read
 if (userPermission < UserLogger.PERMISSION_READ):
-    userLogger.showLogin('Identification required')
+    if "redirect" not in form:
+        args = '&'.join([key + '=' + str(form[key].value) for key in form.keys()])
+        if args:
+            url = os.environ['SCRIPT_NAME'] + '?redirect=True&' + args
+        else:
+            url = os.environ['SCRIPT_NAME'] + '?redirect=True'
+        templates.redirect(url)
+    else:
+        userLogger.showLogin('Identification required')
 
 
 ##################################################
