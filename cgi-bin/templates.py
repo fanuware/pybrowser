@@ -41,6 +41,12 @@ def html_page(**kwargs):
                     if nextSession:
                         userLogger.saveSession(nextSession)
                 except Exception as e:
+                    print('''<div id="menu">
+                    <form action="pybrowser.py" method = "post">
+                    <label class="menu_item" id="menu_cancel">
+                    <input class="menu_selector" onclick="history.back()">Back</label>
+                    </form>''')
+                    print('</div>')
                     print('<h1>Error</h1>')
                     print('<h2 style="color=red;">' + str(e) + '</h2>')
                 print('</body>')
@@ -76,6 +82,12 @@ def html_token(**kwargs):
 
 @html_page(title='Message')
 def message(*args, **kwargs):
+    print('''<div id="menu">
+    <form action="pybrowser.py" method = "post">
+    <label class="menu_item" id="menu_cancel">
+    <input class="menu_selector" onclick="history.back()">Back</label>
+    </form>''')
+    print('</div>')
     title = args[0]
     message = args[1]
     print('<h1>' + title + '</h1>')
@@ -84,6 +96,12 @@ def message(*args, **kwargs):
 
 @html_page(title='Message')
 def error(*args, **kwargs):
+    print('''<div id="menu">
+    <form action="pybrowser.py" method = "post">
+    <label class="menu_item" id="menu_cancel">
+    <input class="menu_selector" onclick="history.back()">Back</label>
+    </form>''')
+    print('</div>')
     message = args[0]
     print('<h1>Error</h1>')
     print('<h2 style="color=red;">' + message + '</h2>')
