@@ -63,9 +63,9 @@ if (userPermission < UserLogger.PERMISSION_READ):
     if "redirect" not in form:
         args = '&'.join([key + '=' + str(form[key].value) for key in form.keys()])
         if args:
-            url = os.environ['SCRIPT_NAME'] + '?redirect=True&' + args
+            url = os.path.basename(os.environ['SCRIPT_NAME']) + '?redirect=True&' + args
         else:
-            url = os.environ['SCRIPT_NAME'] + '?redirect=True'
+            url = os.path.basename(os.environ['SCRIPT_NAME']) + '?redirect=True'
         templates.redirect(url)
     else:
         userLogger.showLogin('Identification required')
