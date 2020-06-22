@@ -75,8 +75,10 @@ if (userPermission < UserLogger.PERMISSION_READ):
 # create download
 def createDownload(fullname, **kwargs):
     mime_type = mimetypes.guess_type(fullname)[0]
-    name = os.path.basename(fullname) if 'name' not in kwargs else kwargs['name']
+    if not mime_type:
+        mime_type = 'application/octet-stream'
     print ("Content-Type: " + mime_type)
+    name = os.path.basename(fullname) if 'name' not in kwargs else kwargs['name']
     if 'inline' not in kwargs or kwargs['inline'] is False:
         print ("Content-Disposition: attachment; filename=" + name)
     print ("")
