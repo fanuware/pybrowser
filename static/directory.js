@@ -3,7 +3,6 @@ document.getElementById("menu_upload").onchange = function () {
 };
 
 
-
 /* modal: insert folder */
 var modalF = document.getElementById('modalInsertFolder');
 var btn = document.getElementById("insertFolder");
@@ -61,3 +60,18 @@ document.getElementById("RenameSubmit").onclick = function() {
     document.getElementById("sendFolder").submit();
 };
 
+function copyToClipboard(source) {
+    function oncopy(event) {
+        document.removeEventListener("copy", oncopy, true);
+        event.stopImmediatePropagation();
+        event.preventDefault();
+
+        href = window.location.origin + window.location.pathname
+        url = href.split('/').slice(0,-1).join('/') +
+            '/download.py?inline=0&path=' +
+            source;
+        event.clipboardData.setData("text/plain", url);
+    }
+    document.addEventListener("copy", oncopy, true);
+    document.execCommand("copy");
+}

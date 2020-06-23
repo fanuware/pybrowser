@@ -398,7 +398,7 @@ def directory(*args, **kwargs):
             </label>
         </form>''')
         if permission >= userLogger.PERMISSION_WRITE:
-            print('''<form action="pybrowser.py" method = "post">
+            print('''<form action="pybrowser.py" method="post" onsubmit='copyToClipboard("''' + os.path.join(filepath, name) + '''")'>
             <label>
                 <input type="hidden" name="path" value="''' + os.path.join(filepath, name) + '''">
                 <input type="hidden" name="cmd" value="copy">
@@ -432,7 +432,7 @@ def directory(*args, **kwargs):
             </label>
         </form>''')
         if permission >= userLogger.PERMISSION_WRITE:
-            print('''<form action="pybrowser.py" method = "post">
+            print('''<form action="pybrowser.py" method="post" onsubmit='copyToClipboard("''' + os.path.join(filepath, name) + '''")'>
             <label>
                 <input type="hidden" name="path" value="''' + os.path.join(filepath, name) + '''">
                 <input type="hidden" name="cmd" value="copy">
